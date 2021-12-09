@@ -5,8 +5,6 @@ import ThreeIdResolver from '@ceramicnetwork/3id-did-resolver'
 import { Ed25519Provider } from 'key-did-provider-ed25519'
 
 import ThreeIdProvider from '3id-did-provider'
-
-
 import { DID } from 'dids'
 
 
@@ -15,6 +13,7 @@ const NODE_URL_TESTNET = 'https://gateway-clay.ceramic.network';
 const NODE_URL_MAINNET = 'https://gateway.ceramic.network';
 
 const ceramic = new CeramicClient(NODE_URL_3BOXLABS);
+declare var threeIdProvider: ThreeIdProvider;
 
 const getPermission = async (request: any) => {
     return request.payload.paths
@@ -23,13 +22,20 @@ const getPermission = async (request: any) => {
 /**
  * Initialize a DID based on private key and create a new one if none exists
  * Will also encrypt the private key and store it inside masterSeed field
- * @param prvkey 
- * @returns
+ * @param prvkey the private key to use to initialise the 3DID
+ * @param init where or not to reauthenticate the user
+ * @returns ThreeIdProvider
  */
-export async function initialize(prvKey: string): Promise<any> {
+export async function initialize(prvKey: string, init: boolean = false): Promise<any> {
     const authId = prvKey;  
     const authSecret = Buffer.from(prvKey);
-    const threeIdProvider = await ThreeIdProvider.create({
+
+    // Use previously initialized object
+    if (threeIdProvider != undefined && !init) {
+        return {authId, did: threeIdProvider.id, provider: threeIdProvider};
+    }
+
+    threeIdProvider = await ThreeIdProvider.create({
         getPermission,  
         ceramic,
         authId,
@@ -50,19 +56,12 @@ export async function initialize(prvKey: string): Promise<any> {
  * @param prvKey an authSecret already present inside the keychain
  * @param newPrvKey the new key to be added inside the keychain
  */
-export async function addAuthenticator(prevAuthId: string, prvKey: string, newPrvKey: string): Promise<void> {
-    const authId = prvKey;
-    const authSecret = Buffer.from(prvKey);
+export async function addAuthenticator(newPrvKey: string): Promise<any> {
+    const authId = newPrvKey;
     const newAuthSecret = Buffer.from(newPrvKey);
-    const threeIdProvider = await ThreeIdProvider.create({
-        getPermission,  
-        ceramic,
-        authSecret,
-        authId: prevAuthId,
-    });
-
     await threeIdProvider.keychain.add(authId, newAuthSecret);
     await threeIdProvider.keychain.commit();
+    return threeIdProvider;
 }
 
 /**
@@ -80,13 +79,6 @@ export function getMasterSeed(): any {
  */
 export async function removeAuthenticator(prvKey: string): Promise<any> {
     const authId = prvKey;
-    const authSecret = Buffer.from(prvKey);
-    const threeIdProvider = await ThreeIdProvider.create({
-        getPermission,  
-        ceramic,
-        authSecret,
-        authId,
-    });
     await threeIdProvider.keychain.remove(authId);
     await threeIdProvider.keychain.commit();
     return threeIdProvider;
