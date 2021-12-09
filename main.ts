@@ -27,7 +27,7 @@ const getPermission = async (request: any) => {
  * @returns
  */
 export async function initialize(prvKey: string): Promise<any> {
-    const authId = "gd-3id-ceramic-"+ randomString(5);  
+    const authId = prvKey;  
     const authSecret = Buffer.from(prvKey);
     const threeIdProvider = await ThreeIdProvider.create({
         getPermission,  
@@ -42,7 +42,7 @@ export async function initialize(prvKey: string): Promise<any> {
     ceramic.did = did;
     const res = await ceramic.did.authenticate();
     // Now encrypt to prvkey with the master seed and store it inside a field `masterSeed`
-    return {authId, did: res};
+    return {authId, did: res, provider: threeIdProvider};
 } 
 
 /**
@@ -51,7 +51,7 @@ export async function initialize(prvKey: string): Promise<any> {
  * @param newPrvKey the new key to be added inside the keychain
  */
 export async function addAuthenticator(prevAuthId: string, prvKey: string, newPrvKey: string): Promise<void> {
-    const authId = "gd-3id-ceramic-"+ randomString(5);  
+    const authId = prvKey;
     const authSecret = Buffer.from(prvKey);
     const newAuthSecret = Buffer.from(newPrvKey);
     const threeIdProvider = await ThreeIdProvider.create({
@@ -60,7 +60,7 @@ export async function addAuthenticator(prevAuthId: string, prvKey: string, newPr
         authSecret,
         authId: prevAuthId,
     });
-    
+
     await threeIdProvider.keychain.add(authId, newAuthSecret);
     await threeIdProvider.keychain.commit();
 }
@@ -75,9 +75,19 @@ export function getMasterSeed(): any {
 
 /**
  * Remove the provided authenticator
- * @param prvKey
- * @returns Promise<boolean>
+ * @param prvKey the authenticator private key to be removed from the keychain
+ * @returns bool 
  */
-export function removeAuthenticator(prvKey: number): any {
-
+export async function removeAuthenticator(prvKey: string): Promise<any> {
+    const authId = prvKey;
+    const authSecret = Buffer.from(prvKey);
+    const threeIdProvider = await ThreeIdProvider.create({
+        getPermission,  
+        ceramic,
+        authSecret,
+        authId,
+    });
+    await threeIdProvider.keychain.remove(authId);
+    await threeIdProvider.keychain.commit();
+    return threeIdProvider;
 }
