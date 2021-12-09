@@ -27,20 +27,22 @@ const getPermission = async (request: any) => {
  * @returns
  */
 export async function initialize(prvKey: String): Promise<any> {
-    const seed = randomBytes(32);
-    try{
-        const threeIdProvider = await ThreeIdProvider.create({getPermission, seed, ceramic});
-        const provider = threeIdProvider.getDidProvider();
-        const resolver = ThreeIdResolver.getResolver(ceramic);
-        const did = new DID({ provider, resolver });
-        ceramic.did = did;
-        var r = await ceramic.did.authenticate();
+    const authId = "gd-3id-ceramic";
+    const authSecret = Buffer.from(prvKey);
 
-        console.log(r);
-    }catch(e){
-        console.log(e);
-    }
+    const threeIdProvider = await ThreeIdProvider.create({
+        getPermission,  
+        ceramic,
+        authId,
+        authSecret,
+    });
 
+    const provider = threeIdProvider.getDidProvider();
+    const resolver = ThreeIdResolver.getResolver(ceramic);
+    const did = new DID({ provider, resolver });
+    ceramic.did = did;
+    const res = await ceramic.did.authenticate();
+    return res;
 } 
 
 /**

@@ -15,9 +15,8 @@ describe("Hello", () => {
 
 describe("Initialize a new Decentralized Identifier.", () => {
     it("Should initialize a DID based on privatekey", async (done) => {
-        var myPrvkey = "thisismyprivakey";
+        var myPrvkey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // Length need to be 32
         var res = await initialize(myPrvkey);
-
-        expect(res).to.equal("did:3:kjzl6cwe1jw149e9y4s2t4qxj0h83nmom3cjyot6t6e04ao6wbh543f66l25c64");
-    });
+        expect(res).to.equal("did:3:kjzl6cwe1jw1494fmr39v7jqm87qkukqt38cf6fvtk091qcl795u1n4okkj5b7w");
+    }).timeout(50000);
 });
