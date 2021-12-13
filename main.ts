@@ -6,11 +6,10 @@ import { DID } from 'dids'
 export class CeramicSDK {
     threeIdProvider!: ThreeIdProvider
     ceramic: CeramicClient;
-    authId: string;
+    authId!: string;
 
-    constructor(networkUrl: string, pubKey: string){
+    constructor(networkUrl: string){
         this.ceramic = new CeramicClient(networkUrl);
-        this.authId = pubKey;
     }
 
     async getPermission(request: any){
@@ -21,10 +20,12 @@ export class CeramicSDK {
      * Initialize a DID based on private key and create a new one if none exists
      * Will also encrypt the private key and store it inside masterSeed field
      * @param prvKey the private key to use to create a new DID
+     * @param pubKey the public key derived from prvkey that will be used as authId
      * @returns ThreeIdProvider
      */
-     async initialize(prvKey: string): Promise<any> {
+     async initialize(prvKey: string, pubKey: string): Promise<any> {
         const authSecret = Buffer.from(prvKey);
+        this.authId = pubKey;
         const config = {
             getPermission: this.getPermission,  
             ceramic: this.ceramic,
@@ -43,11 +44,11 @@ export class CeramicSDK {
     /**
      * Add the given private key as another authSecret that can access the DID seed
      * @param newPrvKey the new key to be added inside the keychain
-     * @param authId a derived key from the newPrvkey to be used a authId
+     * @param pubKey the public key derived from prvkey that will be used as authId
      */
-    async addAuthenticator(newPrvKey: string, authId: string): Promise<any> {
+    async addAuthenticator(newPrvKey: string, pubKey: string): Promise<any> {
         const newAuthSecret = Buffer.from(newPrvKey);
-        await this.threeIdProvider.keychain.add(authId, newAuthSecret);
+        await this.threeIdProvider.keychain.add(pubKey, newAuthSecret);
         await this.threeIdProvider.keychain.commit();
         return this.threeIdProvider;
     }
@@ -62,7 +63,7 @@ export class CeramicSDK {
 
     /**
      * Remove the provided authenticator
-     * @param authId the authenticator ID of the private key to be removed from the keychain
+     * @param pubkey the public key derived from prvkey that will be used as authId
      * @returns bool 
      */
     async removeAuthenticator(authId: string): Promise<any> {
