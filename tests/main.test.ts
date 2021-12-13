@@ -1,67 +1,79 @@
 import { expect } from 'chai';
 import { randomString } from '@stablelib/random'
-import { addAuthenticator, initialize, removeAuthenticator } from '../main';
+import { CeramicSDK } from '../main';
 
 const pauseSeconds = (sec: number) => new Promise((res) => setTimeout(res, sec * 1000));
 
+const NODE_URL_3BOXLABS = 'https://ceramic-clay.3boxlabs.com';
+const NODE_URL_TESTNET = 'https://gateway-clay.ceramic.network';
+const NODE_URL_MAINNET = 'https://gateway.ceramic.network';
+
 describe("Initialize a new Decentralized Identifier.", () => {
     it("Should initialize a DID based on privatekey", async (done) => {
+
+        const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS, "pubkeyToUseAsAuthId");
         const myPrvkey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // Length need to be 32
-        const res = await initialize(myPrvkey);
-        expect(res.did).to.equal("did:3:kjzl6cwe1jw1494fmr39v7jqm87qkukqt38cf6fvtk091qcl795u1n4okkj5b7w");
-    }).timeout(50000);
+        const res = await sdkClient.initialize(myPrvkey);
+        expect(res).to.equal("did:3:kjzl6cwe1jw1494fmr39v7jqm87qkukqt38cf6fvtk091qcl795u1n4okkj5b7w");
+        done();
+    }).timeout(10000);
 });
 
-describe("Add a new private key as authSecret", () => {
+describe.only("Add a new private key as authSecret", () => {
+    const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS, "pubkeyToUseAsAuthId");
+
     it("Should retrieve the same DID for two different authSecrents", async (done) => {
         const myPrvkey = "7yaAGVXHhcLFGXL3uQV0Ne85CDFlZjJa"; // Length need to be 32
         const myNewPrvkey = "RIqUaX127GgnirqYVfMKospZRS3wBhgJ"; //  Length need to be 32
         
-        const res = await initialize(myPrvkey);
-        await addAuthenticator(res.authId, myPrvkey, myNewPrvkey);
+        const res = await sdkClient.initialize(myPrvkey);
+        await sdkClient.addAuthenticator(myNewPrvkey, randomString(20));
 
-        const resNewPrvKey = await initialize(myNewPrvkey);
-        expect(resNewPrvKey.did).to.equal(res.did); // gd-3id-ceramic-oWaCf and gd-3id-ceramic-LuAYd
+        const resNewPrvKey = await sdkClient.initialize(myNewPrvkey);
+        expect(resNewPrvKey).to.equal(res);
+        done();
     }).timeout(80000);
 
     it("Should fail since the key was not added as authSecret", async() => {
         const myPrvkey = "7yaAGVXHhcLFGXL3uQV0Ne85CDFlZjJa"; // Length need to be 32
         const myNewPrvkey = "PIqUaX127GgnirqYVfMKospZRS3wBhgJ"; //  Length need to be 32
-        const res = await initialize(myPrvkey);
+        const res = await sdkClient.initialize(myPrvkey);
 
         // myNewPrvkey was not added inside the list of authenticator so this will fail
-        const resNewPrvKey = await initialize(myNewPrvkey);
-        expect(resNewPrvKey.did).not.to.equal(res.did);
+        const resNewPrvKey = await sdkClient.initialize(myNewPrvkey);
+        expect(resNewPrvKey).not.to.equal(res);
     }).timeout(90000);
 
 });
 
 describe("Remove an authenticator from the the authenticator set", () => {
+    const authId1 = "pubkeyToUseAsAuthId";
+    const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS, authId1);
+
     it("Should remove from the authenticator list", async (done) => {
         const prvkey = randomString(32);
-        const idw1 = await initialize(prvkey);
-        const chainList = await idw1.provider.keychain.list();
+        const idw1 = await sdkClient.initialize(prvkey);
+        const chainList = await sdkClient.threeIdProvider.keychain.list();
 
-        expect(chainList[0]).to.equal(prvkey);
+        expect(chainList[0]).to.equal(authId1);
 
         const prvkey2 = randomString(32);
-        const authId = prvkey2; // Since we are using the private key as the authID to make it deterministic
+        const authId2 = randomString(32);
         const authSecret = Buffer.from(prvkey2);
-        await idw1.provider.keychain.add(authId, authSecret);
+        await sdkClient.threeIdProvider.keychain.add(authId2, authSecret);
         await pauseSeconds(2);
-        await idw1.provider.keychain.commit();
+        await sdkClient.threeIdProvider.keychain.commit();
 
-        const newChainList = await idw1.provider.keychain.list();
+        const newChainList = await sdkClient.threeIdProvider.keychain.list();
 
-        expect(newChainList[0]).to.equal(prvkey);
-        expect(newChainList[1]).to.equal(prvkey2);
+        expect(newChainList[0]).to.equal(authId1);
+        expect(newChainList[1]).to.equal(authId2);
 
-        const resProvider = await removeAuthenticator(prvkey2);
-        const listAfterRemoval = await resProvider.keychain.list();
+        await sdkClient.removeAuthenticator(authId2);
+        const listAfterRemoval = await sdkClient.threeIdProvider.keychain.list();
 
         expect(listAfterRemoval.length).to.equal(1);
-        expect(listAfterRemoval[0]).to.equal(prvkey);
+        expect(listAfterRemoval[0]).to.equal(authId1);
 
     }).timeout(90000);
 });
-
