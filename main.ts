@@ -63,11 +63,11 @@ export class CeramicSDK {
 
     /**
      * Remove the provided authenticator
-     * @param pubkey the public key derived from prvkey that will be used as authId
+     * @param pubKey the public key derived from prvkey that will be used as authId
      * @returns bool 
      */
-    async removeAuthenticator(authId: string): Promise<any> {
-        await this.threeIdProvider.keychain.remove(authId);
+    async removeAuthenticator(pubKey: string): Promise<any> {
+        await this.threeIdProvider.keychain.remove(pubKey);
         await this.threeIdProvider.keychain.commit();
         return this.threeIdProvider;
     }
