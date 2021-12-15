@@ -8,7 +8,7 @@ const NODE_URL_3BOXLABS = 'https://ceramic-clay.3boxlabs.com';
 const NODE_URL_TESTNET = 'https://gateway-clay.ceramic.network';
 const NODE_URL_MAINNET = 'https://gateway.ceramic.network';
 
-describe.only("Initialize a new Decentralized Identifier.", () => {
+describe("Initialize a new Decentralized Identifier.", () => {
     it("Should initialize a DID based on privatekey", async (done) => {
 
         const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
@@ -19,7 +19,7 @@ describe.only("Initialize a new Decentralized Identifier.", () => {
     }).timeout(10000);
 });
 
-describe.only("Add a new private key as authSecret", () => {
+describe("Add a new private key as authSecret", () => {
     const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
 
     it("Should retrieve the same DID for two different authSecrents", async (done) => {
@@ -79,3 +79,49 @@ describe("Remove an authenticator from the the authenticator set", () => {
 
     }).timeout(90000);
 });
+
+
+describe("Create a new tiled document", () => {
+    it("Store the encrypted seed inside masterSeed field", async (done) => {
+        const pubkey = "pubkeyToUseAsAuthId";
+        const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
+        const myPrvkey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // Length need to be 32
+        const res = await sdkClient.initialize(myPrvkey, pubkey);
+        const seed = sdkClient.threeIdProvider.keychain._keyring.seed;
+
+        const encryptedData = "Encrypt(myPrvkey, seed)";
+        const doc = await sdkClient.createOrGetTileDoc(pubkey, res, encryptedData);
+
+        // Retreive the encrypted and stored private key and compare it with myprvkey
+
+        const retrievedMasterSeed = await sdkClient.getMasterSeed(pubkey);
+        expect(retrievedMasterSeed).to.equal(encryptedData);
+        
+
+    }).timeout(10000);
+});
+
+
+
+
+/* describe.only("Encrypt/decrypt", () => {
+    it("Encrypt", async (done) => {
+        window.crypto.subtle.generateKey(
+            {
+                name: "ECDH",
+                namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
+            },
+            false, //whether the key is extractable (i.e. can be used in exportKey)
+            ["deriveKey", "deriveBits"] //can be any combination of "deriveKey" and "deriveBits"
+        )
+        .then(function(key){
+            //returns a keypair object
+            console.log(key);
+            console.log(key.publicKey);
+            console.log(key.privateKey);
+        })
+        .catch(function(err){
+            console.error(err);
+        });
+    }).timeout(10000);
+}); */

@@ -1,5 +1,6 @@
 import { CeramicClient } from '@ceramicnetwork/http-client'
 import ThreeIdResolver from '@ceramicnetwork/3id-did-resolver'
+import { TileDocument } from '@ceramicnetwork/stream-tile';
 
 import ThreeIdProvider from '3id-did-provider'
 import { DID } from 'dids'
@@ -14,6 +15,25 @@ export class CeramicSDK {
 
     async getPermission(request: any){
         return request.payload.paths;
+    }
+
+    /**
+     * Creates or retrieves a TileDocument
+     * 
+     * @param publickey 
+     * @param data the data to store inside masterSeed field
+     * @param did a DID that will control the stream
+     */
+    async createOrGetTileDoc(publickey: string, did: string, data: any) {
+        const doc = await TileDocument.deterministic(
+            this.ceramic,
+            { family: publickey, 
+              tags: [publickey],
+              controllers: [did]
+             }
+        );
+        await doc.update({masterSeed: data});      
+        return doc; 
     }
 
     /**
@@ -37,7 +57,10 @@ export class CeramicSDK {
         const resolver = ThreeIdResolver.getResolver(this.ceramic);
         this.ceramic.did = new DID({ provider, resolver });
         const authenticatedDID = await this.ceramic.did.authenticate();
-        // Now encrypt to prvkey with the master seed and store it inside a field `masterSeed`
+        const seed = this.threeIdProvider.keychain._keyring.seed;
+        const encryptedData = "";
+
+        this.createOrGetTileDoc(pubKey, authenticatedDID, encryptedData);
         return authenticatedDID;
     } 
 
@@ -55,10 +78,20 @@ export class CeramicSDK {
 
     /**
      * Return the decrypted master seed
-     * @returns 
+     * @param pubKey the public key for which to retrieve the masterSeed for
+     * @returns string
      */
-    getMasterSeed(): any {
-         return "";
+    async getMasterSeed(pubKey: string): Promise<string> {
+        const doc = await TileDocument.deterministic(
+            this.ceramic,
+            { family: pubKey, 
+              tags: [pubKey]
+             },
+             { anchor: false, publish: false }
+        );
+        const seed = <Record<string, any>>doc.content;
+        // Decrypt The master seed
+        return seed.masterSeed;
     }
 
     /**
