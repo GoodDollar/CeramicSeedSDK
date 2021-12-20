@@ -30,16 +30,17 @@ export class CeramicSDK {
     async createOrGetTileDoc(publickey: string, did: string, data: any) {
         const doc = await TileDocument.deterministic(
             this.ceramic,
-            { family: publickey, 
-              tags: [publickey],
+            { family: "masterSeed", 
+              tags: ["v1"],
               controllers: [did]
              }
         );
 
-        if(this.ceramic) {
+        const docType =  doc.content as Record<string, any>;
+        if( docType.masterSeed) {
             return doc;
         }
-        
+
         await doc.update({masterSeed: data});      
         return doc; 
     }
@@ -103,8 +104,9 @@ export class CeramicSDK {
     async getMasterSeed(pubKey: string): Promise<string> {
         const doc = await TileDocument.deterministic(
             this.ceramic,
-            { family: pubKey, 
-              tags: [pubKey]
+            { family: "masterSeed", 
+              tags: ["v1"],
+              controllers: [this.ceramic.did?.id as string],
              },
              { anchor: false, publish: false }
         );

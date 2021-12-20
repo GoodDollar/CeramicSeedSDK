@@ -3,6 +3,7 @@ import { randomString } from '@stablelib/random'
 import { CeramicSDK } from '../main';
 
 import { encrypt, decrypt, generatePrivate, getPublic } from "@toruslabs/eccrypto";
+import { TileDocument } from '@ceramicnetwork/stream-tile';
 
 const pauseSeconds = (sec: number) => new Promise((res) => setTimeout(res, sec * 1000));
 
@@ -103,7 +104,7 @@ describe("Create a new tiled document", () => {
     }).timeout(10000);
 });
 
-describe("Encrypt/decrypt", () => {
+describe.only("Encrypt/decrypt", () => {
     it("Encrypt", async (done) => {
         const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
         const myPrvkey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // Length need to be 32
