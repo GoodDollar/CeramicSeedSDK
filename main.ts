@@ -35,6 +35,11 @@ export class CeramicSDK {
               controllers: [did]
              }
         );
+
+        if(this.ceramic) {
+            return doc;
+        }
+        
         await doc.update({masterSeed: data});      
         return doc; 
     }
@@ -111,7 +116,7 @@ export class CeramicSDK {
             ciphertext: Buffer.from(tileContent.masterSeed.ciphertext.data),
             mac: Buffer.from(tileContent.masterSeed.mac.data)
         }
-        
+
         const seed = Buffer.from(this.threeIdProvider.keychain._keyring.seed);
         const decryptedMastedSeed = await this.decrypt(seed, ecies);
         
