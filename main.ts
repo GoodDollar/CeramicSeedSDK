@@ -2,8 +2,11 @@ import { CeramicClient } from '@ceramicnetwork/http-client'
 import ThreeIdResolver from '@ceramicnetwork/3id-did-resolver'
 import { TileDocument } from '@ceramicnetwork/stream-tile';
 
+import { encrypt, decrypt, getPublic } from "@toruslabs/eccrypto"
+
 import ThreeIdProvider from '3id-did-provider'
 import { DID } from 'dids'
+import { Ecies } from 'eccrypto';
 export class CeramicSDK {
     threeIdProvider!: ThreeIdProvider
     ceramic: CeramicClient;
@@ -36,6 +39,16 @@ export class CeramicSDK {
         return doc; 
     }
 
+    async encrypt(publicKey: any, dataToEncrypt: any): Promise<any>{
+        const encrypted = await encrypt(Buffer.from(publicKey), Buffer.from(dataToEncrypt));
+        return encrypted;
+    }
+
+    async decrypt(privateKey: any, encryptedData: any): Promise<any> {
+        const decrypted = await decrypt(privateKey, encryptedData);
+        return decrypted;
+    }
+
     /**
      * Initialize a DID based on private key and create a new one if none exists
      * Will also encrypt the private key and store it inside masterSeed field
@@ -58,9 +71,10 @@ export class CeramicSDK {
         this.ceramic.did = new DID({ provider, resolver });
         const authenticatedDID = await this.ceramic.did.authenticate();
         const seed = this.threeIdProvider.keychain._keyring.seed;
-        const encryptedData = "";
+        const publicKeySeed = getPublic(Buffer.from(seed));
+        const encryptedData = await this.encrypt(publicKeySeed, prvKey);
 
-        this.createOrGetTileDoc(pubKey, authenticatedDID, encryptedData);
+        const res = await this.createOrGetTileDoc(pubKey, authenticatedDID, encryptedData);
         return authenticatedDID;
     } 
 
@@ -89,9 +103,19 @@ export class CeramicSDK {
              },
              { anchor: false, publish: false }
         );
-        const seed = <Record<string, any>>doc.content;
-        // Decrypt The master seed
-        return seed.masterSeed;
+        const tileContent = <Record<string, any>>doc.content;
+
+        const ecies : Ecies = {
+            iv: Buffer.from(tileContent.masterSeed.iv.data),
+            ephemPublicKey: Buffer.from(tileContent.masterSeed.ephemPublicKey.data),
+            ciphertext: Buffer.from(tileContent.masterSeed.ciphertext.data),
+            mac: Buffer.from(tileContent.masterSeed.mac.data)
+        }
+        
+        const seed = Buffer.from(this.threeIdProvider.keychain._keyring.seed);
+        const decryptedMastedSeed = await this.decrypt(seed, ecies);
+        
+        return decryptedMastedSeed.toString();
     }
 
     /**

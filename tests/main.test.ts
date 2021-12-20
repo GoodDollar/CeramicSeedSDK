@@ -2,6 +2,8 @@ import { expect } from 'chai';
 import { randomString } from '@stablelib/random'
 import { CeramicSDK } from '../main';
 
+import { encrypt, decrypt, generatePrivate, getPublic } from "@toruslabs/eccrypto";
+
 const pauseSeconds = (sec: number) => new Promise((res) => setTimeout(res, sec * 1000));
 
 const NODE_URL_3BOXLABS = 'https://ceramic-clay.3boxlabs.com';
@@ -101,27 +103,26 @@ describe("Create a new tiled document", () => {
     }).timeout(10000);
 });
 
-
-
-
-/* describe.only("Encrypt/decrypt", () => {
+describe("Encrypt/decrypt", () => {
     it("Encrypt", async (done) => {
-        window.crypto.subtle.generateKey(
-            {
-                name: "ECDH",
-                namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
-            },
-            false, //whether the key is extractable (i.e. can be used in exportKey)
-            ["deriveKey", "deriveBits"] //can be any combination of "deriveKey" and "deriveBits"
-        )
-        .then(function(key){
-            //returns a keypair object
-            console.log(key);
-            console.log(key.publicKey);
-            console.log(key.privateKey);
-        })
-        .catch(function(err){
-            console.error(err);
-        });
+        const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
+        const myPrvkey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // Length need to be 32
+        const res = await sdkClient.initialize(myPrvkey, "pubkeyToUseAsAuthId");
+
+        const seed = Buffer.from(sdkClient.threeIdProvider.keychain._keyring.seed);
+        var publicKeyA =  getPublic(seed);// size: 65
+        const encrypt = await sdkClient.encrypt(publicKeyA, myPrvkey);
+
+        const decrypt = await sdkClient.decrypt(seed, encrypt);
+        const str = decrypt.toString();
+        expect(myPrvkey).equal(str);
+        
+        try{
+            const master = await sdkClient.getMasterSeed("pubkeyToUseAsAuthId");
+            expect(master).to.equal(myPrvkey);
+        }catch(e){
+            console.log(e);
+        }
+
     }).timeout(10000);
-}); */
+});
