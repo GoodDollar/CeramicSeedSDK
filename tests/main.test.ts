@@ -93,18 +93,18 @@ describe("Create a new tiled document", () => {
         const seed = sdkClient.threeIdProvider.keychain._keyring.seed;
 
         const encryptedData = "Encrypt(myPrvkey, seed)";
-        const doc = await sdkClient.createOrGetTileDoc(pubkey, res, encryptedData);
+        const doc = await sdkClient.initializeMasterSeed(encryptedData);
 
         // Retreive the encrypted and stored private key and compare it with myprvkey
 
-        const retrievedMasterSeed = await sdkClient.getMasterSeed(pubkey);
+        const retrievedMasterSeed = await sdkClient.getMasterSeed();
         expect(retrievedMasterSeed).to.equal(encryptedData);
         
 
     }).timeout(10000);
 });
 
-describe.only("Encrypt/decrypt", () => {
+describe("Encrypt/decrypt", () => {
     it("Encrypt", async (done) => {
         const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
         const myPrvkey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // Length need to be 32
@@ -119,11 +119,31 @@ describe.only("Encrypt/decrypt", () => {
         expect(myPrvkey).equal(str);
         
         try{
-            const master = await sdkClient.getMasterSeed("pubkeyToUseAsAuthId");
+            const master = await sdkClient.getMasterSeed();
             expect(master).to.equal(myPrvkey);
         }catch(e){
             console.log(e);
         }
 
     }).timeout(10000);
+});
+
+describe.only("Check masterSeed field not updated", () => {
+    const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
+
+    it("Should not update the masterSeed field with different authID", async (done) => {
+        
+        const myPrvkey = "RIqUaX127GgnirqYVfMKospZRS3wBhgJ";
+        const res = await sdkClient.initialize(myPrvkey, "pubkeyToUseAsAuthId1");
+        const docBefore = await sdkClient.initializeMasterSeed(myPrvkey);
+
+        const res2 = await sdkClient.initialize(myPrvkey, "pubkeyToUseAsAuthId2");
+        const docAfter = await sdkClient.initializeMasterSeed(myPrvkey);
+
+        expect(res).eq(res2);
+        expect(docAfter).eq(docBefore);
+
+        done();
+    }).timeout(80000);
+
 });

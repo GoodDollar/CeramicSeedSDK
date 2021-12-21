@@ -21,27 +21,32 @@ export class CeramicSDK {
     }
 
     /**
-     * Creates or retrieves a TileDocument
+     * Creates or retrieves a TileDocument containing the master seed field
      * 
      * @param publickey 
-     * @param data the data to store inside masterSeed field
+     * @param prvkey the data to store inside masterSeed field
      * @param did a DID that will control the stream
      */
-    async createOrGetTileDoc(publickey: string, did: string, data: any) {
+    async initializeMasterSeed(prvkey: any) {
         const doc = await TileDocument.deterministic(
             this.ceramic,
             { family: "masterSeed", 
               tags: ["v1"],
-              controllers: [did]
+              controllers: [this.ceramic.did?.id as string]
              }
         );
 
         const docType =  doc.content as Record<string, any>;
-        if( docType.masterSeed) {
+
+        if (docType.masterSeed) {
             return doc;
         }
 
-        await doc.update({masterSeed: data});      
+        const seed = this.threeIdProvider.keychain._keyring.seed;
+        const publicKeySeed = getPublic(Buffer.from(seed));
+        const encryptedData = await this.encrypt(publicKeySeed, prvkey);
+
+        await doc.update({masterSeed: encryptedData});      
         return doc; 
     }
 
@@ -60,7 +65,7 @@ export class CeramicSDK {
      * Will also encrypt the private key and store it inside masterSeed field
      * @param prvKey the private key to use to create a new DID
      * @param pubKey the public key derived from prvkey that will be used as authId
-     * @returns ThreeIdProvider
+     * @returns string
      */
      async initialize(prvKey: string, pubKey: string): Promise<any> {
         const authSecret = Buffer.from(prvKey);
@@ -76,11 +81,8 @@ export class CeramicSDK {
         const resolver = ThreeIdResolver.getResolver(this.ceramic);
         this.ceramic.did = new DID({ provider, resolver });
         const authenticatedDID = await this.ceramic.did.authenticate();
-        const seed = this.threeIdProvider.keychain._keyring.seed;
-        const publicKeySeed = getPublic(Buffer.from(seed));
-        const encryptedData = await this.encrypt(publicKeySeed, prvKey);
-
-        const res = await this.createOrGetTileDoc(pubKey, authenticatedDID, encryptedData);
+        
+        await this.initializeMasterSeed(prvKey);
         return authenticatedDID;
     } 
 
@@ -98,13 +100,12 @@ export class CeramicSDK {
 
     /**
      * Return the decrypted master seed
-     * @param pubKey the public key for which to retrieve the masterSeed for
      * @returns string
      */
-    async getMasterSeed(pubKey: string): Promise<string> {
+    async getMasterSeed(): Promise<string> {
         const doc = await TileDocument.deterministic(
             this.ceramic,
-            { family: "masterSeed", 
+            { family: "masterSeed",
               tags: ["v1"],
               controllers: [this.ceramic.did?.id as string],
              },
