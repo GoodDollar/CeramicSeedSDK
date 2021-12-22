@@ -1,5 +1,5 @@
 {
-  "name": "gd-ceramic-sdk",
+  "name": "ceramic-seed-sdk",
   "version": "1.0.0",
   "description": "",
   "main": "./lib/main.js",
