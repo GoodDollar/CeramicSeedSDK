@@ -2,8 +2,7 @@ import { expect } from 'chai';
 import { randomString } from '@stablelib/random'
 import { CeramicSDK } from '../main';
 
-import { encrypt, decrypt, generatePrivate, getPublic } from "@toruslabs/eccrypto";
-import { TileDocument } from '@ceramicnetwork/stream-tile';
+import { getPublic } from "@toruslabs/eccrypto";
 
 const pauseSeconds = (sec: number) => new Promise((res) => setTimeout(res, sec * 1000));
 
