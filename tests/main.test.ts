@@ -11,20 +11,19 @@ const NODE_URL_TESTNET = 'https://gateway-clay.ceramic.network';
 const NODE_URL_MAINNET = 'https://gateway.ceramic.network';
 
 describe("Initialize a new Decentralized Identifier.", () => {
-    it("Should initialize a DID based on privatekey", async (done) => {
+    it("Should initialize a DID based on privatekey", async () => {
 
         const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
         const myPrvkey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // Length need to be 32
         const res = await sdkClient.initialize(myPrvkey, "pubkeyToUseAsAuthId");
         expect(res).to.equal("did:3:kjzl6cwe1jw1494fmr39v7jqm87qkukqt38cf6fvtk091qcl795u1n4okkj5b7w");
-        done();
     }).timeout(10000);
 });
 
 describe("Add a new private key as authSecret", () => {
     const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
 
-    it("Should retrieve the same DID for two different authSecrents", async (done) => {
+    it("Should retrieve the same DID for two different authSecrents", async () => {
         const myPrvkey = "7yaAGVXHhcLFGXL3uQV0Ne85CDFlZjJa"; // Length need to be 32
         const myNewPrvkey = "RIqUaX127GgnirqYVfMKospZRS3wBhgJ"; //  Length need to be 32
         
@@ -35,7 +34,6 @@ describe("Add a new private key as authSecret", () => {
 
         const resNewPrvKey = await sdkClient.initialize(myNewPrvkey, derivedPubkey2);
         expect(resNewPrvKey).to.equal(res);
-        done();
     }).timeout(80000);
 
     it("Should fail since the key was not added as authSecret", async() => {
@@ -54,7 +52,7 @@ describe("Remove an authenticator from the the authenticator set", () => {
     const pubkey1 = "pubkeyToUseAsAuthId";
     const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
 
-    it("Should remove from the authenticator list", async (done) => {
+    it("Should remove from the authenticator list", async () => {
         const prvkey = randomString(32);
         const idw1 = await sdkClient.initialize(prvkey, pubkey1);
         const chainList = await sdkClient.threeIdProvider.keychain.list();
@@ -78,13 +76,12 @@ describe("Remove an authenticator from the the authenticator set", () => {
 
         expect(listAfterRemoval.length).to.equal(1);
         expect(listAfterRemoval[0]).to.equal(pubkey1);
-
     }).timeout(90000);
 });
 
 
 describe("Create a new tiled document", () => {
-    it("Store the encrypted seed inside masterSeed field", async (done) => {
+    it("Store the encrypted seed inside masterSeed field", async () => {
         const pubkey = "pubkeyToUseAsAuthId";
         const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
         const myPrvkey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // Length need to be 32
@@ -98,13 +95,11 @@ describe("Create a new tiled document", () => {
 
         const retrievedMasterSeed = await sdkClient.getMasterSeed();
         expect(retrievedMasterSeed).to.equal(encryptedData);
-        
-
     }).timeout(10000);
 });
 
 describe("Encrypt/decrypt", () => {
-    it("Encrypt", async (done) => {
+    it("Encrypt", async () => {
         const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
         const myPrvkey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // Length need to be 32
         const res = await sdkClient.initialize(myPrvkey, "pubkeyToUseAsAuthId");
@@ -116,21 +111,15 @@ describe("Encrypt/decrypt", () => {
         const decrypt = await sdkClient.decrypt(seed, encrypt);
         const str = decrypt.toString();
         expect(myPrvkey).equal(str);
-        
-        try{
-            const master = await sdkClient.getMasterSeed();
-            expect(master).to.equal(myPrvkey);
-        }catch(e){
-            console.log(e);
-        }
-
-    }).timeout(10000);
+        const master = await sdkClient.getMasterSeed();
+        expect(master).to.equal(myPrvkey);
+    }).timeout(80000);
 });
 
-describe.only("Check masterSeed field not updated", () => {
+describe("Check masterSeed field not updated", () => {
     const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
 
-    it("Should not update the masterSeed field with different authID", async (done) => {
+    it("Should not update the masterSeed field with different authID", async () => {
         
         const myPrvkey = "RIqUaX127GgnirqYVfMKospZRS3wBhgJ";
         const res = await sdkClient.initialize(myPrvkey, "pubkeyToUseAsAuthId1");
@@ -141,8 +130,6 @@ describe.only("Check masterSeed field not updated", () => {
 
         expect(res).eq(res2);
         expect(docAfter).eq(docBefore);
-
-        done();
     }).timeout(80000);
 
 });
