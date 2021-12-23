@@ -88,14 +88,13 @@ describe("Create a new tiled document", () => {
         const res = await sdkClient.initialize(myPrvkey, pubkey);
         const seed = sdkClient.threeIdProvider.keychain._keyring.seed;
 
-        const encryptedData = "Encrypt(myPrvkey, seed)";
-        const doc = await sdkClient.initializeMasterSeed(encryptedData);
+        const doc = await sdkClient.initializeMasterSeed(myPrvkey);
 
         // Retreive the encrypted and stored private key and compare it with myprvkey
 
         const retrievedMasterSeed = await sdkClient.getMasterSeed();
-        expect(retrievedMasterSeed).to.equal(encryptedData);
-    }).timeout(10000);
+        expect(retrievedMasterSeed).to.equal(myPrvkey);
+    }).timeout(80000);
 });
 
 describe("Encrypt/decrypt", () => {
@@ -116,7 +115,7 @@ describe("Encrypt/decrypt", () => {
     }).timeout(80000);
 });
 
-describe("Check masterSeed field not updated", () => {
+describe.only("Check masterSeed field not updated", () => {
     const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS);
 
     it("Should not update the masterSeed field with different authID", async () => {
@@ -129,7 +128,9 @@ describe("Check masterSeed field not updated", () => {
         const docAfter = await sdkClient.initializeMasterSeed(myPrvkey);
 
         expect(res).eq(res2);
-        expect(docAfter).eq(docBefore);
-    }).timeout(80000);
+        expect(docAfter.controllers[0]).to.equal(docBefore.controllers[0]);
+        expect( (<Record<string, any>>docAfter.content).masterSeed.iv ).deep.equal( (<Record<string, any>>docAfter.content).masterSeed.iv);
+        expect( (<Record<string, any>>docAfter.content).masterSeed.ciphertext ).deep.equal( (<Record<string, any>>docAfter.content).masterSeed.ciphertext);
+    }).timeout(90000);
 
 });
