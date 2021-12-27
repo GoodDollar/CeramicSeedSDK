@@ -5,7 +5,7 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ master, production ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -51,7 +51,9 @@ jobs:
         default: patch
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - uses: JS-DevTools/npm-publish@v1
+    - name: publish
+      if: startsWith(github.event.head_commit.message, 'RELEASE')
+      uses: JS-DevTools/npm-publish@v1
       with:
         token: ${{ secrets.NPM_KEY_TG6 }}
         access: public
