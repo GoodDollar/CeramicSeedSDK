@@ -2,13 +2,13 @@
   "name": "@gooddollar/ceramic-seed-sdk",
   "version": "1.0.3",
   "description": "",
-  "main": "./lib/main.js",
-  "types": "./lib/main.d.ts",
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
   "directories": {
-    "lib": "lib"
+    "dist": "dist"
   },
   "exports": {
-    ".": "./lib/main.js"
+    ".": "./dist/main.js"
   },
   "scripts": {
     "prepare": "npm run build",
