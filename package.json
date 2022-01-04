@@ -1,10 +1,9 @@
 {
   "name": "@gooddollar/ceramic-seed-sdk",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "",
   "main": "./dist/main.js",
   "types": "./dist/main.d.ts",
-
   "directories": {
     "dist": "dist"
   },
