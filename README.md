@@ -6,7 +6,7 @@ Manage a privatekey or seed by multiple Ids
 Install Ceramic-seed-sdk into your project 
 
 ```bash
-npm install ceramic-seed-sdk
+npm install @gooddollar/ceramic-seed-sdk
 ```
 # Usage 
 
