@@ -6,12 +6,12 @@ Manage a privatekey or seed by multiple Ids
 Install Ceramic-seed-sdk into your project 
 
 ```bash
-npm install @gooddollar/ceramic-seed-sdk
+yarn add @gooddollar/ceramic-seed-sdk
 ```
 # Usage 
 
 ```js
-import { CeramicSDK } from 'ceramic-seed-sdk'
+import { CeramicSDK } from '@gooddollar/ceramic-seed-sdk'
 ```
 
 - Create a new instance of the sdk: 
