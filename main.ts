@@ -71,7 +71,7 @@ export class CeramicSDK {
    * @returns string
    */
   async initialize(prvKey: string, pubKey: string, label: string): Promise<any> {
-    const authSecret = Buffer.from(prvKey)
+    const authSecret = Buffer.from(prvKey,"hex")
     this.authId = pubKey
     const config = {
       getPermission: this.getPermission,
@@ -95,7 +95,7 @@ export class CeramicSDK {
    * @param pubKey the public key derived from prvkey that will be used as authId
    */
   async addAuthenticator(newPrvKey: string, pubKey: string, label: string): Promise<any> {
-    const newAuthSecret = Buffer.from(newPrvKey)
+    const newAuthSecret = Buffer.from(newPrvKey, "hex")
     await this.threeIdProvider.keychain.add(pubKey, newAuthSecret)
     await this.threeIdProvider.keychain.commit()
     const doc = await this.getMeta()

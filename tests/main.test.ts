@@ -9,7 +9,7 @@ const pauseSeconds = (sec: number) => new Promise(res => setTimeout(res, sec * 1
 const NODE_URL_3BOXLABS = 'https://ceramic-clay.3boxlabs.com'
 const NODE_URL_TESTNET = 'https://gateway-clay.ceramic.network'
 const NODE_URL_MAINNET = 'https://gateway.ceramic.network'
-const randPrivateKey = () => randomString(32, '0123456789abcdef')
+const randPrivateKey = () => randomString(64, '0123456789abcdef')
 
 describe('Initialize a new Decentralized Identifier.', () => {
   it('Should initialize a DID based on privatekey', async () => {
@@ -61,15 +61,15 @@ describe('Remove an authenticator from the the authenticator set', () => {
   const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS)
 
   it('Should remove from the authenticator list', async () => {
-    const prvkey = randomString(32)
+    const prvkey = randPrivateKey()
     const idw1 = await sdkClient.initialize(prvkey, pubkey1, 'provider')
     const chainList = await sdkClient.threeIdProvider.keychain.list()
 
     expect(chainList[0]).to.equal(pubkey1)
 
-    const prvkey2 = randomString(32)
+    const prvkey2 = randPrivateKey()
     const pubkey2 = randomString(32)
-    const authSecret = Buffer.from(prvkey2)
+    const authSecret = Buffer.from(prvkey2, "hex")
     await sdkClient.threeIdProvider.keychain.add(pubkey2, authSecret)
     await pauseSeconds(2)
     await sdkClient.threeIdProvider.keychain.commit()
