@@ -1,12 +1,11 @@
 import { CeramicClient } from '@ceramicnetwork/http-client'
 import ThreeIdResolver from '@ceramicnetwork/3id-did-resolver'
 import { TileDocument } from '@ceramicnetwork/stream-tile'
-
-import { encrypt, decrypt, getPublic } from '@toruslabs/eccrypto'
-
+import KeyDidResolver from 'key-did-resolver'
 import ThreeIdProvider from '3id-did-provider'
 import { DID } from 'dids'
-import { Ecies } from 'eccrypto'
+import BN from 'bn.js'
+
 export class CeramicSDK {
   threeIdProvider!: ThreeIdProvider
   ceramic: CeramicClient
@@ -23,7 +22,7 @@ export class CeramicSDK {
   async getMeta() {
     const doc = await TileDocument.deterministic(this.ceramic, {
       family: 'masterSeed',
-      tags: ['v2'],
+      tags: ['v3'],
       controllers: [this.ceramic.did?.id as string]
     })
 
@@ -45,21 +44,32 @@ export class CeramicSDK {
       return doc
     }
 
-    const seed = this.threeIdProvider.keychain._keyring.seed
-    const publicKeySeed = getPublic(Buffer.from(seed))
-    const encryptedData = await this.encrypt(publicKeySeed, prvkey)
 
-    await doc.update({ masterSeed: encryptedData, authenticators: { [publicKey]: label } })
+    const encryptedData = await this.encrypt({prvkey})
+    await doc.update({ masterSeed: encryptedData, authenticators: { [publicKey]: label }, keys: { [publicKey] : encryptedData } })
     return doc
   }
 
-  async encrypt(publicKey: any, dataToEncrypt: any): Promise<any> {
-    const encrypted = await encrypt(Buffer.from(publicKey), Buffer.from(dataToEncrypt))
+  reduceKey(key: string, seed: string): string {
+    const a = new BN(key,16)
+    const b = new BN(seed,16)
+    return a.sub(b).toString("hex")
+  }
+
+  restoreKey(reduced: string, seed: string) {
+    const a = new BN(reduced,16)
+    const b = new BN(seed,16)
+    return a.add(b).toString("hex")
+  }
+
+  async encrypt(dataToEncrypt: any): Promise<any> {
+    const encrypted = await this.ceramic.did?.createDagJWE(dataToEncrypt,[this.ceramic.did?.id])
+
     return encrypted
   }
 
-  async decrypt(privateKey: Buffer, encryptedData: any): Promise<any> {
-    const decrypted = await decrypt(privateKey, encryptedData)
+  async decrypt(encryptedData: any): Promise<any> {
+    const decrypted = await this.ceramic.did?.decryptDagJWE(encryptedData)
     return decrypted
   }
 
@@ -81,10 +91,13 @@ export class CeramicSDK {
     }
     this.threeIdProvider = await ThreeIdProvider.create(config)
     const provider = this.threeIdProvider.getDidProvider()
-    const resolver = ThreeIdResolver.getResolver(this.ceramic)
-    this.ceramic.did = new DID({ provider, resolver })
-    const authenticatedDID = await this.ceramic.did.authenticate()
-
+    const resolver = {
+      ...KeyDidResolver.getResolver(),
+      ...ThreeIdResolver.getResolver(this.ceramic),
+    }
+    this.ceramic.setDID(new DID({ resolver }))
+    this.ceramic.did?.setProvider(provider)
+    const authenticatedDID = await this.ceramic.did?.authenticate()    
     await this.initializeMasterSeed(prvKey, pubKey, label)
     return authenticatedDID
   }
@@ -96,12 +109,14 @@ export class CeramicSDK {
    */
   async addAuthenticator(newPrvKey: string, pubKey: string, label: string): Promise<any> {
     const newAuthSecret = Buffer.from(newPrvKey, "hex")
+    
     await this.threeIdProvider.keychain.add(pubKey, newAuthSecret)
     await this.threeIdProvider.keychain.commit()
     const doc = await this.getMeta()
     const content = <Record<string, any>>doc.content
 
     content.authenticators[pubKey] = label
+    content.keys[pubKey] = await this.encrypt({prvkey: newPrvKey})
 
     await doc.update({ ...content })
     return this.threeIdProvider
@@ -113,21 +128,24 @@ export class CeramicSDK {
    */
   async getMasterSeed(): Promise<string> {
     const doc = await this.getMeta()
-    const tileContent = <Record<string, any>>doc.content
+    const tileContent = <Record<string, any>>doc.content   
+   
+    const decryptedMastedSeed = await this.decrypt(tileContent.masterSeed)
 
-    const ecies: Ecies = {
-      iv: Buffer.from(tileContent.masterSeed.iv.data),
-      ephemPublicKey: Buffer.from(tileContent.masterSeed.ephemPublicKey.data),
-      ciphertext: Buffer.from(tileContent.masterSeed.ciphertext.data),
-      mac: Buffer.from(tileContent.masterSeed.mac.data)
-    }
-
-    const seed = Buffer.from(this.threeIdProvider.keychain._keyring.seed)
-    const decryptedMastedSeed = await this.decrypt(seed, ecies)
-
-    return decryptedMastedSeed.toString()
+    return decryptedMastedSeed?.prvkey
   }
 
+  async getProviderKeyPair(provider: string): Promise<{privateKey: string, publicKey:string} | undefined> {
+    const doc = await this.getMeta()
+    const tileContent = <Record<string, any>>doc.content
+    const entry = Object.entries(tileContent.authenticators).find(_ => _[1] === provider)
+    if(entry)
+    {
+      const publicKey = entry[0]
+      const privateKey = await this.decrypt(tileContent.keys[publicKey])
+      return {publicKey, privateKey: privateKey.prvkey}
+    }
+  }
   /**
    * Remove the provided authenticator
    * @param pubKey the public key derived from prvkey that will be used as authId
@@ -140,6 +158,7 @@ export class CeramicSDK {
     const content = <Record<string, any>>doc.content
 
     delete content.authenticators[pubKey]
+    delete content.keys[pubKey]
 
     await doc.update({ ...content })
 

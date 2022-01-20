@@ -27,14 +27,14 @@ describe('Initialize a new Decentralized Identifier.', () => {
 
 describe('Add a new private key as authSecret', () => {
   const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS)
+  const myPrvkey = randPrivateKey() // Length need to be 32
+  const derivedPubkey2 = randomString(20)
+  const myNewPrvkey = randPrivateKey() //  Length need to be 32
 
   it('Should retrieve the same DID for two different authSecrets', async () => {
-    const myPrvkey = randPrivateKey() // Length need to be 32
-    const myNewPrvkey = randPrivateKey() //  Length need to be 32
 
     const res = await sdkClient.initialize(myPrvkey, 'pubkeyToUseAsAuthId', 'provider')
 
-    const derivedPubkey2 = randomString(20)
     await sdkClient.addAuthenticator(myNewPrvkey, derivedPubkey2, 'provider2')
 
     const resNewPrvKey = await sdkClient.initialize(myNewPrvkey, derivedPubkey2, 'provider2')
@@ -42,9 +42,15 @@ describe('Add a new private key as authSecret', () => {
 
     const meta = (await sdkClient.getMeta()) as any
     expect(meta.content.authenticators[derivedPubkey2]).to.eq('provider2')
-    expect(meta.content.authenticators['pubkeyToUseAsAuthId']).to.eq('provider')
+    expect(meta.content.authenticators['pubkeyToUseAsAuthId']).to.eq('provider')    
   }).timeout(80000)
 
+  it("should get provider key pair", async () => {
+    const main = await sdkClient.getProviderKeyPair('provider')
+    const second = await sdkClient.getProviderKeyPair('provider2')
+    expect(main).to.eql({publicKey: 'pubkeyToUseAsAuthId', privateKey: myPrvkey})
+    expect(second).to.eql({publicKey: derivedPubkey2, privateKey: myNewPrvkey})
+  })
   it('Should fail since the key was not added as authSecret', async () => {
     const myPrvkey = randPrivateKey() // Length need to be 32
     const myNewPrvkey = randPrivateKey() //  Length need to be 32
@@ -104,22 +110,19 @@ describe('Create a new tiled document', () => {
   }).timeout(80000)
 })
 
-describe('Encrypt/decrypt', () => {
-  it('Encrypt', async () => {
+describe('Encrypt/decrypt', () => {  
+
+  it('reduce/restore keys', async () => {
     const sdkClient = new CeramicSDK(NODE_URL_3BOXLABS)
     const myPrvkey = randPrivateKey() // Length need to be 32
-    const res = await sdkClient.initialize(myPrvkey, 'pubkeyToUseAsAuthId', 'provider')
+    const seed = randPrivateKey()
+   
+    const encrypted = sdkClient.reduceKey(myPrvkey, seed)
 
-    const seed = Buffer.from(sdkClient.threeIdProvider.keychain._keyring.seed)
-    const publicKeyA = getPublic(seed) // size: 65
-    const encrypt = await sdkClient.encrypt(publicKeyA, myPrvkey)
-
-    const decrypt = await sdkClient.decrypt(seed, encrypt)
-    const str = decrypt.toString()
-    expect(myPrvkey).equal(str)
-    const master = await sdkClient.getMasterSeed()
-    expect(master).to.equal(myPrvkey)
+    const decrypt = sdkClient.restoreKey(encrypted, seed)
+    expect(myPrvkey).equal(decrypt)    
   }).timeout(80000)
+
 })
 
 describe('Check masterSeed field not updated', () => {
