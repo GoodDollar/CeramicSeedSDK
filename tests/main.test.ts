@@ -2,8 +2,6 @@ import { expect } from 'chai'
 import { randomString } from '@stablelib/random'
 import { CeramicSDK } from '../main'
 
-import { getPublic } from '@toruslabs/eccrypto'
-
 const pauseSeconds = (sec: number) => new Promise(res => setTimeout(res, sec * 1000))
 
 const NODE_URL_3BOXLABS = 'https://ceramic-clay.3boxlabs.com'
